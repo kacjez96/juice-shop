@@ -74,32 +74,68 @@ jobs:
       - name: Install Semgrep
         run: pip install semgrep
 
-      - name: Run Semgrep and analyze results
+      - name: Run Semgrep with verbose output
         run: |
-          # Uruchom skan i zapisz wyniki
-          semgrep --config=auto --json --output=semgrep-results.json || true
+          echo "🔍 Starting Semgrep SAST scan with verbose output..."
+          echo "=================================================="
 
-          # Analizuj wyniki
-          if [ -f semgrep-results.json ]; then
-            TOTAL=$(jq '.results | length' semgrep-results.json)
-            HIGH=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' semgrep-results.json)
-            CRITICAL=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep-results.json)
+          # Uruchom Semgrep z verbose i kolorowym outputem
+          semgrep --config=auto \
+                  --verbose \
+                  --no-error \
+                  --metrics=off \
+                  --force-color \
+                  || true
 
-            echo "## Semgrep Results" >> $GITHUB_STEP_SUMMARY
-            echo "- Total findings: $TOTAL" >> $GITHUB_STEP_SUMMARY
-            echo "- High severity: $HIGH" >> $GITHUB_STEP_SUMMARY
-            echo "- Critical severity: $CRITICAL" >> $GITHUB_STEP_SUMMARY
+          echo "=================================================="
+          echo "🔍 Detailed scan with severity breakdown:"
+          echo "=================================================="
 
-            # Wyświetl pierwsze 5 krytycznych
-            echo "### Top Critical Issues:" >> $GITHUB_STEP_SUMMARY
-            jq -r '.results[] | select(.extra.severity == "ERROR") | "\(.path):\(.start.line) - \(.extra.message)"' semgrep-results.json | head -5 >> $GITHUB_STEP_SUMMARY
+          # Pokaż tylko HIGH i CRITICAL z większymi szczegółami
+          semgrep --config=auto \
+                  --severity=WARNING,ERROR \
+                  --verbose \
+                  --no-error \
+                  --force-color \
+                  || true
+
+      - name: Run Semgrep and show summary
+        run: |
+          echo "=================================================="
+          echo "📊 SAST Scan Summary:"
+          echo "=================================================="
+
+          # Uruchom z JSON aby policzyć, ale pokaż też w konsoli
+          semgrep --config=auto --json -o /tmp/results.json || true
+
+          if [ -f /tmp/results.json ]; then
+            TOTAL=$(jq '.results | length' /tmp/results.json)
+            HIGH=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' /tmp/results.json)
+            CRITICAL=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' /tmp/results.json)
+
+            echo "📈 Total findings: $TOTAL"
+            echo "⚠️  High severity: $HIGH"
+            echo "🚨 Critical severity: $CRITICAL"
+            echo ""
+            echo "🔝 Top 5 Critical Issues:"
+            echo "------------------------"
+
+            # Wyświetl top 5 krytycznych z detalami
+            jq -r '.results[] | select(.extra.severity == "ERROR") | 
+              "❌ \(.check_id)\n   File: \(.path):\(.start.line)\n   Message: \(.extra.message)\n   Fix: \(.extra.fix // "No automated fix available")\n"' \
+              /tmp/results.json | head -20
+
+            echo ""
+            echo "⚠️  Top 5 High Issues:"
+            echo "------------------------"
+
+            jq -r '.results[] | select(.extra.severity == "WARNING") | 
+              "⚠️  \(.check_id)\n   File: \(.path):\(.start.line)\n   Message: \(.extra.message)\n"' \
+              /tmp/results.json | head -20
           fi
 
-      - name: Upload Semgrep results
-        uses: actions/upload-artifact@v4
-        with:
-          name: semgrep-results
-          path: semgrep-results.json
+          echo "=================================================="
+          echo "✅ SAST scan completed!"
 
   secrets-scan:
     name: Stage 2 - Secrets Scan (GitLeaks)
@@ -162,5 +198,5 @@ jobs:
       - name: Upload ZAP Scan Report
         uses: actions/upload-artifact@v4
         with:
-          name: zap-scan-report
+          name: zap_scan
           path: zap_report.html
