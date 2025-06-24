@@ -83,7 +83,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Run Gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v1
         env:
           # Token jest potrzebny do przesyłania wyników jako SARIF do zakładki Security
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -95,6 +95,8 @@ jobs:
     # Uprawnienia do odczytu obrazu z rejestru kontenerów GitHub
     permissions:
       packages: read
+      issues: write
+      contents: read
     steps:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
