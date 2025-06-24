@@ -187,17 +187,18 @@ jobs:
           echo "Checking application logs..."
           docker logs juice-shop
 
-      - name: Run ZAP Baseline Scan against the running container
-        uses: zaproxy/action-baseline@v0.7.0
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.11.0
         with:
-          # Skanujemy aplikację dostępną na localhost w środowisku runnera
           target: 'http://localhost:3000'
-          fail_action: false # Nie przerywaj pipeline'u
-          format: html
-          report: zap_report.html
+          fail_action: false
+          cmd_options: '-x zap_report.xml -J zap_report.json -w zap_report.md'
 
-      - name: Upload ZAP Scan Report
+      - name: Show ZAP Markdown Report in Logs
+        run: cat zap_report.md
+
+      - name: Upload ZAP Report as Artifact (optional)
         uses: actions/upload-artifact@v4
         with:
           name: zap-scan-report
-          path: zap_report.html
+          path: zap_report.md
