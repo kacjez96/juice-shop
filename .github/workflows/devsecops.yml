@@ -83,7 +83,6 @@ jobs:
           semgrep --config=auto \
                   --verbose \
                   --no-error \
-                  --metrics=off \
                   --force-color \
                   || true
 
@@ -194,9 +193,8 @@ jobs:
           # Skanujemy aplikację dostępną na localhost w środowisku runnera
           target: 'http://localhost:3000'
           fail_action: false # Nie przerywaj pipeline'u
+          format: md
+          report: zap_report.md
 
-      - name: Upload ZAP Scan Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap_scan
-          path: zap_report.html
+      - name: Print ZAP Markdown Report
+        run: cat zap_report.md
