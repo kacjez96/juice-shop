@@ -175,8 +175,8 @@ jobs:
 
         - name: Set up Docker CLI
           run: |
-            apt-get update
-            apt-get install -y docker.io
+            sudo apt-get update
+            sudo apt-get install -y docker.io
 
         - name: Log in to GitHub Container Registry
           uses: docker/login-action@v3
@@ -187,15 +187,15 @@ jobs:
 
         - name: Pull and run Juice Shop app
           run: |
-            docker pull ghcr.io/${{ github.repository }}:latest
-            docker run -d --name juice-shop -p 3000:3000 ghcr.io/${{ github.repository }}:latest
+            sudo docker pull ghcr.io/${{ github.repository }}:latest
+            sudo docker run -d --name juice-shop -p 3000:3000 ghcr.io/${{ github.repository }}:latest
 
         - name: Wait for application to start
           run: sleep 30
 
         - name: Run OWASP ZAP Baseline Scan
           run: |
-            docker run --rm \
+            sudo docker run --rm \
               --network host \
               -v "${{ github.workspace }}:/zap/wrk" \
               owasp/zap2docker-stable zap-baseline.py \
@@ -218,5 +218,5 @@ jobs:
 
         - name: Stop Juice Shop container
           run: |
-            docker stop juice-shop
-            docker rm juice-shop
+            sudo docker stop juice-shop
+            sudo docker rm juice-shop
