@@ -153,61 +153,61 @@ jobs:
           # Token jest potrzebny do przesyłania wyników jako SARIF do zakładki Security
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-dast-scan:
-    name: DAST Scan with Docker-in-Docker
-    runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:20.10.16-dind
-        privileged: true
-        options: >-
-          --privileged
-          --storage-driver=overlay2
-        ports:
-          - 2375:2375
+  dast-scan:
+      name: DAST Scan with Docker-in-Docker
+      runs-on: ubuntu-latest
+      services:
+        docker:
+          image: docker:20.10.16-dind
+          privileged: true
+          options: >-
+            --privileged
+            --storage-driver=overlay2
+          ports:
+            - 2375:2375
 
-    env:
-      DOCKER_HOST: tcp://localhost:2375
+      env:
+        DOCKER_HOST: tcp://localhost:2375
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+        - name: Log in to GitHub Container Registry
+          uses: docker/login-action@v3
+          with:
+            registry: ghcr.io
+            username: ${{ github.actor }}
+            password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull and run Juice Shop app inside DinD
-        run: |
-          docker pull ghcr.io/${{ github.repository }}:latest
-          docker run -d --name juice-shop -p 3000:3000 ghcr.io/${{ github.repository }}:latest
+        - name: Pull and run Juice Shop app inside DinD
+          run: |
+            docker pull ghcr.io/${{ github.repository }}:latest
+            docker run -d --name juice-shop -p 3000:3000 ghcr.io/${{ github.repository }}:latest
 
-      - name: Wait for app to start
-        run: sleep 30
+        - name: Wait for app to start
+          run: sleep 30
 
-      - name: Run OWASP ZAP Baseline Scan inside DinD
-        run: |
-          docker run --rm \
-            -v $(pwd):/zap/wrk \
-            owasp/zap2docker-stable zap-baseline.py \
-            -t http://host.docker.internal:3000 \
-            -w /zap/wrk/zap_report.md \
-            -J /zap/wrk/zap_report.json \
-            -r zap_report.html || true
+        - name: Run OWASP ZAP Baseline Scan inside DinD
+          run: |
+            docker run --rm \
+              -v $(pwd):/zap/wrk \
+              owasp/zap2docker-stable zap-baseline.py \
+              -t http://host.docker.internal:3000 \
+              -w /zap/wrk/zap_report.md \
+              -J /zap/wrk/zap_report.json \
+              -r zap_report.html || true
 
-      - name: Upload ZAP Scan Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: zap_scan_report
-          path: |
-            zap_report.md
-            zap_report.json
-            zap_report.html
+        - name: Upload ZAP Scan Report
+          uses: actions/upload-artifact@v4
+          with:
+            name: zap_scan_report
+            path: |
+              zap_report.md
+              zap_report.json
+              zap_report.html
 
-      - name: Stop Juice Shop container
-        run: |
-          docker stop juice-shop
-          docker rm juice-shop
+        - name: Stop Juice Shop container
+          run: |
+            docker stop juice-shop
+            docker rm juice-shop
