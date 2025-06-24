@@ -15,7 +15,7 @@ jobs:
     # Uprawnienia do zapisu obrazu w rejestrze kontenerów GitHub
     permissions:
       contents: read
-      packages: write 
+      packages: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           # Używamy wersji Node.js zgodnej z oryginalnym Dockerfile (v20 jest bezpiecznym wyborem)
-          node-version: '20' 
+          node-version: '20'
       - name: Install dependencies
         run: npm install
       - name: Run NPM Audit for High/Critical issues
@@ -71,21 +71,21 @@ jobs:
           config: "p/default"
 
   secrets-scan:
-    name: Stage 2 - Secrets Scan (TruffleHog)
+    name: Scan - Secrets (GitLeaks)
     runs-on: ubuntu-latest
-    needs: build-docker-image # Zależy od zakończenia etapu 'build'
+    needs: build
+    # Job został zaktualizowany, aby używać GitLeaks
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        # GitLeaks potrzebuje pełnej historii do skanowania
         with:
           fetch-depth: 0
-      - name: Run TruffleHog
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: .
-          base: ${{ github.event.before }}
-          head: ${{ github.sha }}
-          extra_args: --only-verified
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          # Token jest potrzebny do przesyłania wyników jako SARIF do zakładki Security
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dast-scan:
     name: Stage 2 - DAST Scan (OWASP ZAP)
