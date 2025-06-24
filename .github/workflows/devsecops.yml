@@ -154,64 +154,48 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dast-scan:
-      name: DAST Scan with Docker‑in‑Docker
-      runs-on: ubuntu-latest
+    name: Stage 2 - DAST Scan (OWASP ZAP)
+    runs-on: ubuntu-latest
+    permissions:
+      packages: read
+      contents: read
+      issues: write
 
-      services:
-        docker:
-          image: docker:20.10.16-dind
-          options: >-
-            --privileged
-            --shm-size=2g
-          ports:
-            - 2375:2375
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
-      env:
-        DOCKER_HOST: tcp://localhost:2375
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      steps:
-        - name: Checkout repository
-          uses: actions/checkout@v3
+      - name: Pull and start application container
+        run: |
+          echo "Pulling image..."
+          docker pull ghcr.io/${{ github.repository }}:latest
+          echo "Starting container..."
+          docker run -d --rm --name juice-shop -p 3000:3000 ghcr.io/${{ github.repository }}:latest
 
-        - name: Log in to GitHub Container Registry
-          uses: docker/login-action@v3
-          with:
-            registry: ghcr.io
-            username: ${{ github.actor }}
-            password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Wait for app to be ready
+        run: |
+          echo "Waiting 30 seconds for app to initialize..."
+          sleep 30
+          curl -I http://localhost:3000 || exit 1
 
-        - name: Pull and run Juice Shop app
-          run: |
-            sudo docker pull ghcr.io/${{ github.repository }}:latest
-            sudo docker run -d --name juice-shop -p 3000:3000 ghcr.io/${{ github.repository }}:latest
+      - name: Run ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.11.0
+        with:
+          target: 'http://localhost:3000'
+          fail_action: false
+          allow_issue_writing: true
+          cmd_options: '-a'  # Aggressive scan
 
-        - name: Wait for application to start
-          run: sleep 30
-
-        - name: Run OWASP ZAP Baseline Scan
-          run: |
-            sudo docker run --rm \
-              --network host \
-              -v "${{ github.workspace }}:/zap/wrk" \
-              owasp/zap2docker-stable zap-baseline.py \
-              -t http://localhost:3000 \
-              -w /zap/wrk/zap_report.md \
-              -J /zap/wrk/zap_report.json \
-              -r /zap/wrk/zap_report.html || true
-
-        - name: Show ZAP Markdown Report
-          run: cat zap_report.md || echo "No report found"
-
-        - name: Upload ZAP Reports
-          uses: actions/upload-artifact@v4
-          with:
-            name: zap_reports
-            path: |
-              zap_report.md
-              zap_report.json
-              zap_report.html
-
-        - name: Stop Juice Shop container
-          run: |
-            sudo docker stop juice-shop
-            sudo docker rm juice-shop
+      # (Opcjonalnie) wrzuć raport do logów jeśli nie chcesz artefaktów
+      - name: Display summary from markdown
+        if: always()
+        run: |
+          echo "====== ZAP Scan Summary ======"
+          cat report_md.md || echo "Report not generated"
