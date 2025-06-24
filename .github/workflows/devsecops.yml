@@ -156,6 +156,7 @@ jobs:
   dast-scan:
     name: Stage 2 - DAST Scan (OWASP ZAP)
     runs-on: ubuntu-latest
+    needs: build-docker-image
     permissions:
       packages: read
       contents: read
