@@ -1,0 +1,45 @@
+name: DevSecOps Pipeline for Juice Shop
+
+on:
+  push:
+    branches: [ master ] # Uruchom przy push na gałąź master
+  pull_request:
+    branches: [ master ] # Uruchom przy pull request do master
+
+jobs:
+  build:
+    name: Build & Install Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # Juice Shop wymaga nowszej wersji Node.js
+
+      - name: Install dependencies
+        run: npm install
+
+  sca-scan:
+    name: SCA Scan (NPM Audit)
+    runs-on: ubuntu-latest
+    needs: build # Uruchom ten job dopiero po zakończeniu 'build'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run NPM Audit
+        # continue-on-error: true, aby pipeline nie zatrzymał się, gdy znajdzie podatności
+        # Pozwoli to na wykonanie wszystkich skanów w kolejnych krokach
+        run: npm audit --audit-level=high
+        continue-on-error: true
