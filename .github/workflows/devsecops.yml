@@ -71,9 +71,9 @@ jobs:
           config: "p/default"
 
   secrets-scan:
-    name: Scan - Secrets (GitLeaks)
+    name: Stage 2 - Secrets Scan (GitLeaks)
     runs-on: ubuntu-latest
-    needs: build
+    needs: build-docker-image
     # Job został zaktualizowany, aby używać GitLeaks
     steps:
       - name: Checkout code
