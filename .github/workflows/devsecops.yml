@@ -154,15 +154,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   dast-scan:
-      name: DAST Scan with Docker-in-Docker
+      name: DAST Scan with Docker‑in‑Docker
       runs-on: ubuntu-latest
+
       services:
         docker:
           image: docker:20.10.16-dind
-          privileged: true
           options: >-
             --privileged
-            --storage-driver=overlay2
+            --shm-size=2g
           ports:
             - 2375:2375
 
@@ -173,6 +173,11 @@ jobs:
         - name: Checkout repository
           uses: actions/checkout@v3
 
+        - name: Set up Docker CLI
+          run: |
+            apt-get update
+            apt-get install -y docker.io
+
         - name: Log in to GitHub Container Registry
           uses: docker/login-action@v3
           with:
@@ -180,28 +185,32 @@ jobs:
             username: ${{ github.actor }}
             password: ${{ secrets.GITHUB_TOKEN }}
 
-        - name: Pull and run Juice Shop app inside DinD
+        - name: Pull and run Juice Shop app
           run: |
             docker pull ghcr.io/${{ github.repository }}:latest
             docker run -d --name juice-shop -p 3000:3000 ghcr.io/${{ github.repository }}:latest
 
-        - name: Wait for app to start
+        - name: Wait for application to start
           run: sleep 30
 
-        - name: Run OWASP ZAP Baseline Scan inside DinD
+        - name: Run OWASP ZAP Baseline Scan
           run: |
             docker run --rm \
-              -v $(pwd):/zap/wrk \
+              --network host \
+              -v "${{ github.workspace }}:/zap/wrk" \
               owasp/zap2docker-stable zap-baseline.py \
-              -t http://host.docker.internal:3000 \
+              -t http://localhost:3000 \
               -w /zap/wrk/zap_report.md \
               -J /zap/wrk/zap_report.json \
-              -r zap_report.html || true
+              -r /zap/wrk/zap_report.html || true
 
-        - name: Upload ZAP Scan Report
+        - name: Show ZAP Markdown Report
+          run: cat zap_report.md || echo "No report found"
+
+        - name: Upload ZAP Reports
           uses: actions/upload-artifact@v4
           with:
-            name: zap_scan_report
+            name: zap_reports
             path: |
               zap_report.md
               zap_report.json
