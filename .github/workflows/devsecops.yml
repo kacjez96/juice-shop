@@ -173,11 +173,6 @@ jobs:
         - name: Checkout repository
           uses: actions/checkout@v3
 
-        - name: Set up Docker CLI
-          run: |
-            sudo apt-get update
-            sudo apt-get install -y docker.io
-
         - name: Log in to GitHub Container Registry
           uses: docker/login-action@v3
           with:
