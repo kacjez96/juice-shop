@@ -156,9 +156,7 @@
     "js-yaml": "^3.14.0",
     "jsonwebtoken": "0.4.0",
     "jssha": "^3.3.1",
-    "juicy-chat-bot": "^0.8.0",
     "libxmljs2": "~0.37.0",
-    "marsdb": "^0.6.11",
     "median": "^0.0.2",
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
@@ -166,13 +164,13 @@
     "notevil": "^1.3.3",
     "on-finished": "^2.3.0",
     "otplib": "^12.0.1",
-    "pdfkit": "^0.11.0",
+    "pdfkit": "^0.15.0",
     "portscanner": "^2.2.0",
     "prom-client": "^14.2.0",
     "pug": "^3.0.3",
     "replace": "^1.2.2",
     "sanitize-filename": "^1.6.3",
-    "sanitize-html": "1.4.2",
+    "sanitize-html": "2.13.0",
     "semver": "^7.6.3",
     "sequelize": "^6.37.3",
     "serve-index": "^1.9.1",
@@ -181,11 +179,21 @@
     "svg-captcha": "^1.4.0",
     "swagger-ui-express": "^5.0.1",
     "ts-node-dev": "^1.1.8",
-    "unzipper": "0.9.15",
+    "unzipper": "0.12.3",
     "web3": "^4.13.0",
     "winston": "^3.16.0",
     "yaml-schema-validator": "^1.2.3",
     "z85": "^0.0.2"
+  },
+  "overrides": {
+    "crypto-js": "^4.2.0",
+    "lodash": "^4.17.21",
+    "sanitize-html": {
+      "lodash": "^4.17.21"
+    },
+    "pdfkit": {
+      "crypto-js": "^4.2.0"
+    }
   },
   "devDependencies": {
     "@cyclonedx/cyclonedx-npm": "^2.0.0||^3.0.0",
