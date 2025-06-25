@@ -2,7 +2,6 @@
   ~ Copyright (c) 2014-2025 Bjoern Kimminich & the OWASP Juice Shop contributors.
   ~ SPDX-License-Identifier: MIT
   -->
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,9 +10,24 @@
   <meta name="description" content="Probably the most modern and sophisticated insecure web application">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link id="favicon" rel="icon" type="image/x-icon" href="assets/public/favicon_js.ico">
-  <link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.css" />
-  <script src="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.js"></script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+  
+  <!-- Cookie Consent CSS z integrity i crossorigin -->
+  <link rel="stylesheet" 
+        type="text/css" 
+        href="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.css"
+        integrity="sha256-eSi0fBJPN/Ml3hAbLRL6DTVuDHNa9/5+sVaHJJdEfEI="
+        crossorigin="anonymous" />
+  
+  <!-- Cookie Consent JS z integrity i crossorigin -->
+  <script src="//cdnjs.cloudflare.com/ajax/libs/cookieconsent2/3.1.0/cookieconsent.min.js"
+          integrity="sha256-AcMEZaOW/tJAb5G9+Qy9lKN0TGW63Fg+AKEqs7UuNhE="
+          crossorigin="anonymous"></script>
+  
+  <!-- jQuery z integrity i crossorigin -->
+  <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"
+          integrity="sha256-BbhdlvQf/xTY9gja0Dq3HiwQF8LaCRTXxZKRutelT44="
+          crossorigin="anonymous"></script>
+  
   <script>
     window.addEventListener("load", function(){
       window.cookieconsent.initialise({

@@ -2,6 +2,7 @@
  * Copyright (c) 2014-2025 Bjoern Kimminich & the OWASP Juice Shop contributors.
  * SPDX-License-Identifier: MIT
  */
+import session from 'express-session'
 import i18n from 'i18n'
 import cors from 'cors'
 import fs from 'node:fs'
@@ -177,19 +178,87 @@ restoreOverwrittenFilesWithOriginals().then(() => {
   app.use(compression())
 
   /* Bludgeon solution for possible CORS problems: Allow everything! */
-  app.options('*', cors())
-  app.use(cors())
+  const corsOptions = {
+  origin: function (origin: string | undefined, callback: any) {
+    // Lista dozwolonych domen
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:4200',
+      'http://172.18.0.2:3000', // Z raportu ZAP
+      'http://172.18.0.2:4200',
+      // Dodaj inne zaufane domeny produkcyjne
+    ];
+    
+    // Zezwól na requesty bez origin (np. Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      // W środowisku deweloperskim możesz logować odrzucone domeny
+      console.warn(`CORS: Blocked request from origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['X-Total-Count'],
+  optionsSuccessStatus: 200
+};
+
+app.use(cors(corsOptions));
 
   /* Security middleware */
-  app.use(helmet.noSniff())
-  app.use(helmet.frameguard())
-  // app.use(helmet.xssFilter()); // = no protection from persisted XSS via RESTful API
-  app.disable('x-powered-by')
-  app.use(featurePolicy({
-    features: {
-      payment: ["'self'"]
-    }
-  }))
+  app.use(helmet.contentSecurityPolicy({
+  directives: {
+    defaultSrc: ["'self'"],
+    scriptSrc: [
+      "'self'",
+      "'unsafe-inline'", // Tymczasowo - docelowo usuń
+      "'unsafe-eval'",   // Tymczasowo - docelowo usuń  
+      "https://cdnjs.cloudflare.com",
+      "https://code.jquery.com",
+      "https://stackpath.bootstrapcdn.com"
+    ],
+    styleSrc: [
+      "'self'",
+      "'unsafe-inline'", // Tymczasowo - docelowo usuń
+      "https://cdnjs.cloudflare.com",
+      "https://stackpath.bootstrapcdn.com"
+    ],
+    fontSrc: ["'self'", "https://cdnjs.cloudflare.com"],
+    imgSrc: ["'self'", "data:", "https:"],
+    connectSrc: ["'self'", "ws:", "wss:"], // Dodaj ws: i wss: dla WebSocket
+    objectSrc: ["'none'"],
+    mediaSrc: ["'self'"],
+    frameSrc: ["'self'", "https://www.youtube.com"],
+    upgradeInsecureRequests: []
+  }
+}))
+app.use(helmet.noSniff())
+app.use(helmet.frameguard({ action: 'deny' })) // Poprawka dla Anti-clickjacking
+// app.use(helmet.xssFilter()); // = no protection from persisted XSS via RESTful API
+app.disable('x-powered-by')
+app.use(featurePolicy({
+  features: {
+    payment: ["'self'"]
+  }
+}))
+
+app.use((req: Request, res: Response, next: NextFunction) => {
+  // Dodaj brakujące nagłówki bezpieczeństwa
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  
+  // Usuń nagłówki które mogą ujawnić informacje
+  res.removeHeader('X-Powered-By');
+  
+  next();
+});
 
   /* Hiring header */
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -286,6 +355,19 @@ restoreOverwrittenFilesWithOriginals().then(() => {
 
   app.use(express.static(path.resolve('frontend/dist/frontend')))
   app.use(cookieParser('kekse'))
+
+  app.use(session({
+  secret: process.env.SESSION_SECRET || 'juice-shop-session-secret-change-me',
+  resave: false,
+  saveUninitialized: false,
+  name: 'juice-shop-session', // Zmień domyślną nazwę
+  cookie: {
+    secure: process.env.NODE_ENV === 'production', // HTTPS w produkcji
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24, // 24 godziny
+    sameSite: 'strict'
+  }
+}))
   // vuln-code-snippet end directoryListingChallenge accessLogDisclosureChallenge
 
   /* Configure and enable backend-side i18n */
