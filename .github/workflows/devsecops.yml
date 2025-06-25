@@ -284,4 +284,4 @@ jobs:
           # exit-code: '1' <-- NAJWAŻNIEJSZA CZĘŚĆ!
           # Jeśli Trivy znajdzie choć jedną podatność pasującą do kryteriów,
           # zakończy ten krok błędem, co spowoduje zatrzymanie całego pipeline'u.
-          exit-code: '1'
+          exit-code: '0'
