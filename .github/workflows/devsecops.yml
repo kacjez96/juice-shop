@@ -248,9 +248,13 @@ jobs:
           docker network rm zap-network || true
 
   build_and_scan_locally:
-    name: Build and Scan Docker Image
+    name: STAGE 3 - Build and Scan Docker Image
     runs-on: ubuntu-latest
-    needs: dast-scan
+    needs:
+      - sca-scan
+      - sast-scan
+      - secrets-scan
+      - dast-scan
     steps:
       # Krok 1: Pobranie kodu źródłowego aplikacji
       - name: Checkout code
