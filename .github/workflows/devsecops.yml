@@ -7,245 +7,246 @@ on:
     branches: [ master ]
 
 jobs:
-  # # --- ETAP 1: BUILD ---
-  # # Ten jeden job reprezentuje cały etap "build".
-  # build-docker-image:
-  #   name: Stage 1 - Build Docker Image
-  #   runs-on: ubuntu-latest
-  #   # Uprawnienia do zapisu obrazu w rejestrze kontenerów GitHub
-  #   permissions:
-  #     contents: read
-  #     packages: write
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  # --- ETAP 1: BUILD ---
+  # Ten jeden job reprezentuje cały etap "build".
+  build-docker-image:
+    name: Stage 1 - Build Docker Image
+    runs-on: ubuntu-latest
+    # Uprawnienia do zapisu obrazu w rejestrze kontenerów GitHub
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     # Logowanie do GitHub Container Registry (GHCR)
-  #     - name: Log in to GitHub Container Registry
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
+      # Logowanie do GitHub Container Registry (GHCR)
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-  #     # Budowanie obrazu z oryginalnego Dockerfile i wypchnięcie do GHCR
-  #     - name: Build and push Docker image
-  #       uses: docker/build-push-action@v5
-  #       with:
-  #         context: .
-  #         push: true
-  #         # Obraz będzie dostępny pod adresem: ghcr.io/TWOJA_NAZWA/NAZWA_REPO:latest
-  #         tags: ghcr.io/${{ github.repository }}:latest
+      # Budowanie obrazu z oryginalnego Dockerfile i wypchnięcie do GHCR
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # Obraz będzie dostępny pod adresem: ghcr.io/TWOJA_NAZWA/NAZWA_REPO:latest
+          tags: ghcr.io/${{ github.repository }}:latest
 
-  # # --- ETAP 2: SCAN ---
-  # # Wszystkie poniższe joby zależą od `build-docker-image` i uruchomią się równolegle.
+  # --- ETAP 2: SCAN ---
+  # Wszystkie poniższe joby zależą od `build-docker-image` i uruchomią się równolegle.
 
-  # sca-scan:
-  #   name: Stage 2 - SCA Scan (NPM Audit)
-  #   runs-on: ubuntu-latest
-  #   needs: build-docker-image # Zależy od zakończenia etapu 'build'
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         # Używamy wersji Node.js zgodnej z oryginalnym Dockerfile (v20 jest bezpiecznym wyborem)
-  #         node-version: '20'
-  #     - name: Install dependencies
-  #       run: npm install
-  #     - name: Run NPM Audit for High/Critical issues
-  #       run: npm audit --audit-level=high
-  #       continue-on-error: true # Nie przerywaj pipeline'u po znalezieniu podatności
+  sca-scan:
+    name: Stage 2 - SCA Scan (NPM Audit)
+    runs-on: ubuntu-latest
+    needs: build-docker-image # Zależy od zakończenia etapu 'build'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Używamy wersji Node.js zgodnej z oryginalnym Dockerfile (v20 jest bezpiecznym wyborem)
+          node-version: '20'
+      - name: Install dependencies
+        run: npm install
+      - name: Run NPM Audit for High/Critical issues
+        run: npm audit --audit-level=high
+        continue-on-error: true # Nie przerywaj pipeline'u po znalezieniu podatności
 
-  # sast-scan:
-  #   name: Stage 2 - SAST Scan (Semgrep)
-  #   runs-on: ubuntu-latest
-  #   needs: build-docker-image
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
+  sast-scan:
+    name: Stage 2 - SAST Scan (Semgrep)
+    runs-on: ubuntu-latest
+    needs: build-docker-image
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: '3.x'
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-  #     - name: Install Semgrep
-  #       run: pip install semgrep
+      - name: Install Semgrep
+        run: pip install semgrep
 
-  #     - name: Run Semgrep with verbose output
-  #       run: |
-  #         echo "🔍 Starting Semgrep SAST scan with verbose output..."
-  #         echo "=================================================="
+      - name: Run Semgrep with verbose output
+        run: |
+          echo "🔍 Starting Semgrep SAST scan with verbose output..."
+          echo "=================================================="
 
-  #         # Uruchom Semgrep z verbose i kolorowym outputem
-  #         semgrep --config=auto \
-  #                 --verbose \
-  #                 --no-error \
-  #                 --force-color \
-  #                 || true
+          # Uruchom Semgrep z verbose i kolorowym outputem
+          semgrep --config=auto \
+                  --verbose \
+                  --no-error \
+                  --force-color \
+                  || true
 
-  #         echo "=================================================="
-  #         echo "🔍 Detailed scan with severity breakdown:"
-  #         echo "=================================================="
+          echo "=================================================="
+          echo "🔍 Detailed scan with severity breakdown:"
+          echo "=================================================="
 
-  #         # Pokaż tylko HIGH i CRITICAL z większymi szczegółami
-  #         semgrep --config=auto \
-  #                 --severity=WARNING,ERROR \
-  #                 --verbose \
-  #                 --no-error \
-  #                 --force-color \
-  #                 || true
+          # Pokaż tylko HIGH i CRITICAL z większymi szczegółami
+          semgrep --config=auto \
+                  --severity=WARNING,ERROR \
+                  --verbose \
+                  --no-error \
+                  --force-color \
+                  || true
 
-  #     - name: Run Semgrep and show summary
-  #       run: |
-  #         echo "=================================================="
-  #         echo "📊 SAST Scan Summary:"
-  #         echo "=================================================="
+      - name: Run Semgrep and show summary
+        run: |
+          echo "=================================================="
+          echo "📊 SAST Scan Summary:"
+          echo "=================================================="
 
-  #         # Uruchom z JSON aby policzyć, ale pokaż też w konsoli
-  #         semgrep --config=auto --json -o /tmp/results.json || true
+          # Uruchom z JSON aby policzyć, ale pokaż też w konsoli
+          semgrep --config=auto --json -o /tmp/results.json || true
 
-  #         if [ -f /tmp/results.json ]; then
-  #           TOTAL=$(jq '.results | length' /tmp/results.json)
-  #           HIGH=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' /tmp/results.json)
-  #           CRITICAL=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' /tmp/results.json)
+          if [ -f /tmp/results.json ]; then
+            TOTAL=$(jq '.results | length' /tmp/results.json)
+            HIGH=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' /tmp/results.json)
+            CRITICAL=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' /tmp/results.json)
 
-  #           echo "📈 Total findings: $TOTAL"
-  #           echo "⚠️  High severity: $HIGH"
-  #           echo "🚨 Critical severity: $CRITICAL"
-  #           echo ""
-  #           echo "🔝 Top 5 Critical Issues:"
-  #           echo "------------------------"
+            echo "📈 Total findings: $TOTAL"
+            echo "⚠️  High severity: $HIGH"
+            echo "🚨 Critical severity: $CRITICAL"
+            echo ""
+            echo "🔝 Top 5 Critical Issues:"
+            echo "------------------------"
 
-  #           # Wyświetl top 5 krytycznych z detalami
-  #           jq -r '.results[] | select(.extra.severity == "ERROR") | 
-  #             "❌ \(.check_id)\n   File: \(.path):\(.start.line)\n   Message: \(.extra.message)\n   Fix: \(.extra.fix // "No automated fix available")\n"' \
-  #             /tmp/results.json | head -20
+            # Wyświetl top 5 krytycznych z detalami
+            jq -r '.results[] | select(.extra.severity == "ERROR") | 
+              "❌ \(.check_id)\n   File: \(.path):\(.start.line)\n   Message: \(.extra.message)\n   Fix: \(.extra.fix // "No automated fix available")\n"' \
+              /tmp/results.json | head -20
 
-  #           echo ""
-  #           echo "⚠️  Top 5 High Issues:"
-  #           echo "------------------------"
+            echo ""
+            echo "⚠️  Top 5 High Issues:"
+            echo "------------------------"
 
-  #           jq -r '.results[] | select(.extra.severity == "WARNING") | 
-  #             "⚠️  \(.check_id)\n   File: \(.path):\(.start.line)\n   Message: \(.extra.message)\n"' \
-  #             /tmp/results.json | head -20
-  #         fi
+            jq -r '.results[] | select(.extra.severity == "WARNING") | 
+              "⚠️  \(.check_id)\n   File: \(.path):\(.start.line)\n   Message: \(.extra.message)\n"' \
+              /tmp/results.json | head -20
+          fi
 
-  #         echo "=================================================="
-  #         echo "✅ SAST scan completed!"
+          echo "=================================================="
+          echo "✅ SAST scan completed!"
 
-  # secrets-scan:
-  #   name: Stage 2 - Secrets Scan (GitLeaks)
-  #   runs-on: ubuntu-latest
-  #   needs: build-docker-image
-  #   # Job został zaktualizowany, aby używać GitLeaks
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       # GitLeaks potrzebuje pełnej historii do skanowania
-  #       with:
-  #         fetch-depth: 0
-  #     - name: Run Gitleaks
-  #       uses: gitleaks/gitleaks-action@v2
-  #       env:
-  #         # Token jest potrzebny do przesyłania wyników jako SARIF do zakładki Security
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  secrets-scan:
+    name: Stage 2 - Secrets Scan (GitLeaks)
+    runs-on: ubuntu-latest
+    needs: build-docker-image
+    # Job został zaktualizowany, aby używać GitLeaks
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        # GitLeaks potrzebuje pełnej historii do skanowania
+        with:
+          fetch-depth: 0
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          # Token jest potrzebny do przesyłania wyników jako SARIF do zakładki Security
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # dast-scan:
-  #   name: Stage 2 - DAST Scan (OWASP ZAP)
-  #   runs-on: ubuntu-latest
-  #   needs: build-docker-image
-  #   permissions:
-  #     packages: read
-  #     contents: read
-  #     issues: write
-  #   steps:
-  #     - name: Checkout repo
-  #       uses: actions/checkout@v4
+  dast-scan:
+    name: Stage 2 - DAST Scan (OWASP ZAP)
+    runs-on: ubuntu-latest
+    needs: build-docker-image
+    permissions:
+      packages: read
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
         
-  #     - name: Log in to GitHub Container Registry
-  #       uses: docker/login-action@v3
-  #       with:
-  #         registry: ghcr.io
-  #         username: ${{ github.actor }}
-  #         password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
           
-  #     - name: Create Docker network
-  #       run: docker network create zap-network
+      - name: Create Docker network
+        run: docker network create zap-network
         
-  #     - name: Start application
-  #       run: |
-  #         docker run -d \
-  #           --name juice-shop \
-  #           --network zap-network \
-  #           -p 3000:3000 \
-  #           ghcr.io/${{ github.repository }}:latest
+      - name: Start application
+        run: |
+          docker run -d \
+            --name juice-shop \
+            --network zap-network \
+            -p 3000:3000 \
+            ghcr.io/${{ github.repository }}:latest
             
-  #     - name: Wait for application
-  #       run: |
-  #         echo "Waiting for application to start..."
-  #         sleep 30
-  #         echo "Application is ready!"
+      - name: Wait for application
+        run: |
+          echo "Waiting for application to start..."
+          sleep 30
+          echo "Application is ready!"
           
-  #     - name: Get application IP
-  #       id: get-ip
-  #       run: |
-  #         APP_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' juice-shop)
-  #         echo "app-ip=$APP_IP" >> $GITHUB_OUTPUT
-  #         echo "Application IP: $APP_IP"
+      - name: Get application IP
+        id: get-ip
+        run: |
+          APP_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' juice-shop)
+          echo "app-ip=$APP_IP" >> $GITHUB_OUTPUT
+          echo "Application IP: $APP_IP"
           
-  #     - name: Run ZAP scan
-  #       run: |
-  #         mkdir -p $(pwd)/zap-wrk
-  #         chmod 777 $(pwd)/zap-wrk
+      - name: Run ZAP scan
+        run: |
+          mkdir -p $(pwd)/zap-wrk
+          chmod 777 $(pwd)/zap-wrk
           
-  #         docker run --rm \
-  #           --name zap \
-  #           --network zap-network \
-  #           -v $(pwd)/zap-wrk:/zap/wrk:rw \
-  #           -t ghcr.io/zaproxy/zaproxy:stable \
-  #           zap-baseline.py \
-  #           -t http://${{ steps.get-ip.outputs.app-ip }}:3000 \
-  #           -r report.html \
-  #           -w report.md \
-  #           -J report.json \
-  #           -a -j \
-  #           -I \
-  #           || echo "ZAP scan completed with warnings/errors"
+          docker run --rm \
+            --name zap \
+            --network zap-network \
+            -v $(pwd)/zap-wrk:/zap/wrk:rw \
+            -t ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py \
+            -t http://${{ steps.get-ip.outputs.app-ip }}:3000 \
+            -r report.html \
+            -w report.md \
+            -J report.json \
+            -a -j \
+            -I \
+            || echo "ZAP scan completed with warnings/errors"
             
-  #     - name: Upload scan results
-  #       if: always()
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: zap-scan-report
-  #         path: zap-wrk/
-  #         retention-days: 30
+      - name: Upload scan results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-scan-report
+          path: zap-wrk/
+          retention-days: 30
           
-  #     - name: Create issue from scan
-  #       if: always()
-  #       run: |
-  #         if [ -f zap-wrk/report.md ]; then
-  #           echo "## OWASP ZAP Scan Results" > issue_body.md
-  #           echo "" >> issue_body.md
-  #           cat zap-wrk/report.md >> issue_body.md
+      - name: Create issue from scan
+        if: always()
+        run: |
+          if [ -f zap-wrk/report.md ]; then
+            echo "## OWASP ZAP Scan Results" > issue_body.md
+            echo "" >> issue_body.md
+            cat zap-wrk/report.md >> issue_body.md
             
-  #           # Create issue via GitHub API
-  #           gh issue create \
-  #             --title "DAST Scan Results - $(date +'%Y-%m-%d')" \
-  #             --body-file issue_body.md \
-  #             --label "security,dast" \
-  #             || echo "Could not create issue"
-  #         fi
-  #       env:
-  #         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            # Create issue via GitHub API
+            gh issue create \
+              --title "DAST Scan Results - $(date +'%Y-%m-%d')" \
+              --body-file issue_body.md \
+              --label "security,dast" \
+              || echo "Could not create issue"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
-  #     - name: Cleanup
-  #       if: always()
-  #       run: |
-  #         docker stop juice-shop || true
-  #         docker network rm zap-network || true
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop juice-shop || true
+          docker network rm zap-network || true
+
   build_and_scan_locally:
     name: Build and Scan Docker Image
     runs-on: ubuntu-latest
